@@ -4,10 +4,20 @@ from matplotlib import pyplot as plt
 import math, os, time
 from tensorflow.examples.tutorials.mnist import input_data
 import subprocess
+import argparse
 
-reg_type = 'elbo'
-train_size = 10000
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+parser = argparse.ArgumentParser()
+# python coco_transfer2.py --db_path=../data/coco/coco_seg_transfer40_30_299 --batch_size=64 --gpu='0' --type=mask
+
+parser.add_argument('-r', '--reg_type', type=str, default='mmd', help='Type of regularization')
+parser.add_argument('-g', '--gpu', type=str, default='0', help='GPU to use')
+parser.add_argument('-n', '--train_size', type=int, default=10000, help='Number of samples for training')
+args = parser.parse_args()
+
+
+reg_type = args.reg_type
+train_size = args.train_size
+os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 batch_size = 400
 
 
@@ -189,25 +199,25 @@ sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_plac
 sess.run(tf.global_variables_initializer())
 
 # Start training
-plt.ion()
+# plt.ion()
 for i in range(100000):
     batch_x = limited_mnist.next_batch(batch_size)
     batch_x = np.reshape(batch_x, [-1] + x_dim)
     _, nll, mmd, elbo, xmean, xstddev = sess.run([trainer, loss_nll, loss_mmd, loss_elbo, train_xmean, train_xstddev], feed_dict={train_x: batch_x})
     if i % 100 == 0:
         print("Iteration %d, nll %.4f, mmd loss %.4f, elbo loss %.4f" % (i, nll, mmd, elbo))
-    if i % 500 == 0:
-        samples, sample_stddev = sess.run([gen_xmean, gen_xstddev], feed_dict={gen_z: np.random.normal(size=(100, z_dim))})
-        plt.subplot(1, 4, 1)
-        plt.imshow(convert_to_display(samples), cmap='Greys_r')
-        plt.subplot(1, 4, 2)
-        plt.imshow(convert_to_display(sample_stddev), cmap='Greys_r')
-        plt.subplot(1, 4, 3)
-        plt.imshow(convert_to_display(xmean), cmap='Greys_r')
-        plt.subplot(1, 4, 4)
-        plt.imshow(convert_to_display(xstddev), cmap='Greys_r')
-        plt.show()
-        plt.pause(0.01)
+    # if i % 500 == 0:
+    #     samples, sample_stddev = sess.run([gen_xmean, gen_xstddev], feed_dict={gen_z: np.random.normal(size=(100, z_dim))})
+    #     plt.subplot(1, 4, 1)
+    #     plt.imshow(convert_to_display(samples), cmap='Greys_r')
+    #     plt.subplot(1, 4, 2)
+    #     plt.imshow(convert_to_display(sample_stddev), cmap='Greys_r')
+    #     plt.subplot(1, 4, 3)
+    #     plt.imshow(convert_to_display(xmean), cmap='Greys_r')
+    #     plt.subplot(1, 4, 4)
+    #     plt.imshow(convert_to_display(xstddev), cmap='Greys_r')
+    #     plt.show()
+    #     plt.pause(0.01)
 
 
 def compute_log_sum(val):
