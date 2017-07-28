@@ -5,13 +5,14 @@ import math, os, time
 from tensorflow.examples.tutorials.mnist import input_data
 import subprocess
 import argparse
+from scipy import misc as misc
 
 parser = argparse.ArgumentParser()
 # python coco_transfer2.py --db_path=../data/coco/coco_seg_transfer40_30_299 --batch_size=64 --gpu='0' --type=mask
 
 parser.add_argument('-r', '--reg_type', type=str, default='mmd', help='Type of regularization')
 parser.add_argument('-g', '--gpu', type=str, default='0', help='GPU to use')
-parser.add_argument('-n', '--train_size', type=int, default=10000, help='Number of samples for training')
+parser.add_argument('-n', '--train_size', type=int, default=50000, help='Number of samples for training')
 args = parser.parse_args()
 
 
@@ -148,7 +149,7 @@ loss_nll = tf.reduce_mean(loss_nll)
 loss_nll += math.log(2 * np.pi) / 2.0
 
 if reg_type == 'mmd':
-    loss = loss_nll + 10 * loss_mmd
+    loss = loss_nll + 50 * loss_mmd
 elif reg_type == 'elbo':
     loss = loss_nll + loss_elbo
 else:
@@ -206,18 +207,13 @@ for i in range(100000):
     _, nll, mmd, elbo, xmean, xstddev = sess.run([trainer, loss_nll, loss_mmd, loss_elbo, train_xmean, train_xstddev], feed_dict={train_x: batch_x})
     if i % 100 == 0:
         print("Iteration %d, nll %.4f, mmd loss %.4f, elbo loss %.4f" % (i, nll, mmd, elbo))
-    # if i % 500 == 0:
-    #     samples, sample_stddev = sess.run([gen_xmean, gen_xstddev], feed_dict={gen_z: np.random.normal(size=(100, z_dim))})
-    #     plt.subplot(1, 4, 1)
-    #     plt.imshow(convert_to_display(samples), cmap='Greys_r')
-    #     plt.subplot(1, 4, 2)
-    #     plt.imshow(convert_to_display(sample_stddev), cmap='Greys_r')
-    #     plt.subplot(1, 4, 3)
-    #     plt.imshow(convert_to_display(xmean), cmap='Greys_r')
-    #     plt.subplot(1, 4, 4)
-    #     plt.imshow(convert_to_display(xstddev), cmap='Greys_r')
-    #     plt.show()
-    #     plt.pause(0.01)
+    if i % 2000 == 0:
+        samples, sample_stddev = sess.run([gen_xmean, gen_xstddev], feed_dict={gen_z: np.random.normal(size=(100, z_dim))})
+        plots = np.stack([convert_to_display(samples), convert_to_display(sample_stddev),
+                          convert_to_display(xmean), convert_to_display(xstddev)], axis=0)
+        plots = np.expand_dims(plots, axis=-1)
+        plots = convert_to_display(plots)
+        misc.imsave(os.path.join(log_path, 'samples%d.png' % i), plots)
 
 
 def compute_log_sum(val):
